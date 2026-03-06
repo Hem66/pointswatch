@@ -273,13 +273,14 @@ export default function TaskFormModal({
                       placeholder={`Bonus ${idx + 1} name`}
                       value={bonus.name}
                       onChange={e => handleBonusChange(bonus.id, 'name', e.target.value)}
-                      size: 'sm',
+                      className="h-8 text-sm"
                     />
                     <Input
                       type="number"
                       placeholder="Reward (₦)"
                       value={bonus.reward}
                       onChange={e => handleBonusChange(bonus.id, 'reward', parseInt(e.target.value) || 0)}
+                      className="h-8 text-sm"
                     />
                   </div>
                 </Card>
