@@ -21,6 +21,7 @@ interface Task {
   rewards?: number
   category?: string
   description?: string
+  subTasks?: { id: string; title: string; done: boolean }[]
 }
 
 interface Feature {
@@ -42,10 +43,11 @@ export default function LandingPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showAttemptedOnly, setShowAttemptedOnly] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { addToast } = useToast()
 
-  const tasks: Task[] = [
+  const initialTasks: Task[] = [
     {
       id: 1,
       title: 'Update user flows with UX feedback from Session #245',
@@ -59,6 +61,11 @@ export default function LandingPage() {
       rewards: 25000,
       category: 'Design',
       description: 'Update user flows with UX feedback from Session #245. Improve user experience and test new flows with users.',
+      subTasks: [
+        { id: 'sub-1', title: 'Review interview notes', done: true },
+        { id: 'sub-2', title: 'Update wireframes', done: true },
+        { id: 'sub-3', title: 'Validate with team', done: false },
+      ],
     },
     {
       id: 2,
@@ -101,6 +108,10 @@ export default function LandingPage() {
       rewards: 5000,
       category: 'Social',
       description: 'Subscribe to our YouTube channel and share the content on your social media platforms.',
+      subTasks: [
+        { id: 'sub-4-1', title: 'Subscribe', done: true },
+        { id: 'sub-4-2', title: 'Share link', done: false },
+      ],
     },
     {
       id: 5,
@@ -115,6 +126,10 @@ export default function LandingPage() {
       rewards: 7500,
       category: 'Survey',
       description: 'Watch our product demo video and complete a feedback survey.',
+      subTasks: [
+        { id: 'sub-5-1', title: 'Watch demo', done: true },
+        { id: 'sub-5-2', title: 'Complete survey', done: false },
+      ],
     },
     {
       id: 6,
@@ -129,8 +144,50 @@ export default function LandingPage() {
       rewards: 12000,
       category: 'Referral',
       description: 'Share your unique referral link on WhatsApp with at least 5 friends.',
+      subTasks: [
+        { id: 'sub-6-1', title: 'Generate link', done: true },
+        { id: 'sub-6-2', title: 'Send to 5 friends', done: false },
+      ],
     },
   ]
+
+  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+
+  const toggleSubtask = (taskId: number, subId: string) => {
+    setTasks(prev => {
+      const updated = prev.map(task => {
+        if (task.id !== taskId || !task.subTasks) return task
+
+        const newSubs = task.subTasks.map(sub =>
+          sub.id === subId ? { ...sub, done: !sub.done } : sub
+        )
+        const completedCount = newSubs.filter(sub => sub.done).length
+        const newProgress = Math.round((completedCount / newSubs.length) * 100)
+
+        return {
+          ...task,
+          subTasks: newSubs,
+          progress: newProgress,
+        }
+      })
+
+      const updatedTask = updated.find(t => t.id === taskId)
+      if (updatedTask && selectedTask?.id === taskId) {
+        setSelectedTask(updatedTask)
+      }
+
+      return updated
+    })
+
+    const task = tasks.find(t => t.id === taskId)
+    const isDone = task?.subTasks?.find(s => s.id === subId)?.done
+
+    addToast(
+      isDone ? 'Subtask marked as incomplete' : 'Subtask completed',
+      'success',
+      2000
+    )
+  }
 
   const features: Feature[] = [
     { icon: '1', title: 'Feature 1', description: 'Description for feature 1' },
@@ -310,15 +367,50 @@ export default function LandingPage() {
 
         {/* Tasks Grid */}
         {activeTab === 'tasks' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tasks.map((task) => (
-              <Card
-                key={task.id}
-                className="bg-card/30 border-border/50 overflow-hidden hover:border-primary/50 hover:bg-card/50 transition-all group cursor-pointer"
-                onClick={() => setSelectedTask(task)}
-              >
+          <>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground">
+                  {tasks.filter(t => t.progress > 0).length} of {tasks.length} tasks started • average progress {Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / tasks.length)}%
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowAttemptedOnly(false)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                      !showAttemptedOnly
+                        ? 'bg-primary text-white'
+                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/40'
+                    }`}
+                  >
+                    All Tasks
+                  </button>
+                  <button
+                    onClick={() => setShowAttemptedOnly(true)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                      showAttemptedOnly
+                        ? 'bg-primary text-white'
+                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/40'
+                    }`}
+                  >
+                    Attempted
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Tip: click a task card to view details (Coming soon)
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(showAttemptedOnly ? tasks.filter(t => t.progress > 0) : tasks).map((task) => (
+                <Card
+                  key={task.id}
+                  className="bg-card/50 border-border/50 overflow-hidden hover:border-primary/50 transition-all group cursor-pointer"
+                  onClick={() => setSelectedTask(task)}
+                >
                 {/* Banner Image */}
-                <div className="relative w-full h-40 overflow-hidden bg-secondary/30">
+                <div className="relative w-full h-28 overflow-hidden bg-secondary/30">
                   <img
                     src={task.banner || "/placeholder.svg"}
                     alt={task.title}
@@ -329,30 +421,28 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   {/* Icon and Title */}
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center text-white text-xs font-bold mb-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center text-white text-xs font-bold mb-2">
                         {task.icon}
                       </div>
-                      <h3 className="font-semibold text-foreground leading-tight text-balance">
+                      <h3 className="font-semibold text-foreground text-base leading-snug line-clamp-2">
                         {task.title}
                       </h3>
                     </div>
+                    <span className="text-[11px] bg-primary/20 text-primary px-2 py-1 rounded font-semibold">
+                      {task.progress}%
+                    </span>
                   </div>
 
                   {/* Dates */}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span>📅</span>
-                      <span>Start: {task.startDate}</span>
-                    </div>
-                    <span>•</span>
-                    <div className="flex items-center gap-1">
-                      <span>⚡</span>
-                      <span>End: {task.endDate}</span>
-                    </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>📅</span>
+                    <span>{task.startDate}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-primary">⚡ {task.endDate}</span>
                   </div>
 
                   {/* Progress Bar */}
@@ -365,27 +455,28 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <div className="text-xs text-muted-foreground">
-                      Last updated: {task.lastUpdated}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {task.team.slice(0, 3).map((member, idx) => (
-                        <div
-                          key={idx}
-                          className="w-6 h-6 bg-secondary/50 rounded-full flex items-center justify-center text-xs border border-border/50"
+                  {/* Subtasks */}
+                  {task.subTasks && task.subTasks.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {task.subTasks.map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSubtask(task.id, sub.id)
+                          }}
+                          className={`text-[11px] px-2 py-1 rounded-full font-semibold transition ${
+                            sub.done
+                              ? 'bg-emerald-500/20 text-emerald-700'
+                              : 'bg-muted/30 text-muted-foreground hover:bg-muted/40'
+                          }`}
+                          aria-pressed={sub.done}
                         >
-                          {member}
-                        </div>
+                          {sub.done ? '✓' : '○'} {sub.title}
+                        </button>
                       ))}
-                      {task.team.length > 3 && (
-                        <div className="w-6 h-6 bg-secondary/50 rounded-full flex items-center justify-center text-xs border border-border/50 text-muted-foreground">
-                          +{task.team.length - 3}
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  )}
 
                   {/* Reward Badge */}
                   {task.rewards && (
@@ -396,11 +487,21 @@ export default function LandingPage() {
                       </span>
                     </div>
                   )}
+
+                  <div className="pt-3">
+                    <Button
+                      onClick={() => setSelectedTask(task)}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      View details
+                    </Button>
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
-        )}
+        </>
+      )}
 
         {/* Notifications Tab */}
         {activeTab === 'notifications' && (
@@ -551,6 +652,28 @@ export default function LandingPage() {
                   />
                 </div>
               </div>
+
+              {selectedTask.subTasks && selectedTask.subTasks.length > 0 && (
+                <div className="space-y-2">
+                  <p className="font-semibold text-foreground">Subtasks</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTask.subTasks.map((sub) => (
+                      <button
+                        key={sub.id}
+                        onClick={() => toggleSubtask(selectedTask.id, sub.id)}
+                        className={`text-[11px] px-2 py-1 rounded-full font-semibold transition ${
+                          sub.done
+                            ? 'bg-emerald-500/20 text-emerald-700'
+                            : 'bg-muted/30 text-muted-foreground hover:bg-muted/40'
+                        }`}
+                        aria-pressed={sub.done}
+                      >
+                        {sub.done ? '✓' : '○'} {sub.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Team */}
               <div className="space-y-2">

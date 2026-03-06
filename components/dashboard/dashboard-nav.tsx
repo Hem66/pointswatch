@@ -13,7 +13,6 @@ export default function DashboardNav({ activeTab, onTabChange, onNotificationsCl
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'tasks', label: 'Tasks', icon: '✓' },
-    { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
     { id: 'referrals', label: 'Refer & Earn', icon: '🤝' },
     { id: 'profile', label: 'Profile', icon: '👤' },
   ]

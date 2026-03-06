@@ -4,14 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-
-interface BonusTask {
-  id: string
-  name: string
-  type: 'comment' | 'share'
-  reward: number
-  completed: boolean
-}
+import { useIsMobile } from '@/hooks/use-mobile'
 
 interface Task {
   id: string
@@ -25,7 +18,6 @@ interface Task {
   icon: string
   minDuration?: number
   watchProgress?: number
-  bonusTasks?: BonusTask[]
   cooldownUntil?: number
 }
 
@@ -43,6 +35,7 @@ export default function TaskTiers() {
   const [expandedTier, setExpandedTier] = useState<string>('bronze')
   const [tasks, setTasks] = useState<Task[]>([])
   const [expandedTask, setExpandedTask] = useState<string | null>(null)
+  const isMobile = useIsMobile()
 
   const COOLOFF_PERIOD = 3 * 60 * 60 * 1000 // 3 hours in milliseconds
   const BASE_NAIRA_REWARD = 1000 // Naira currency
@@ -69,10 +62,6 @@ export default function TaskTiers() {
           icon: '📺',
           minDuration: 60,
           watchProgress: 0,
-          bonusTasks: [
-            { id: 'bonus-1-1', name: 'Comment on Video', type: 'comment', reward: 300, completed: false },
-            { id: 'bonus-1-2', name: 'Share on WhatsApp', type: 'share', reward: 400, completed: false },
-          ],
         },
         {
           id: 'task-2',
@@ -84,9 +73,6 @@ export default function TaskTiers() {
           action: 'Subscribe',
           completed: false,
           icon: '📢',
-          bonusTasks: [
-            { id: 'bonus-2-1', name: 'Enable Notifications', type: 'comment', reward: 250, completed: false },
-          ],
         },
         {
           id: 'task-3',
@@ -98,9 +84,6 @@ export default function TaskTiers() {
           action: 'Start Survey',
           completed: false,
           icon: '📋',
-          bonusTasks: [
-            { id: 'bonus-3-1', name: 'Share Feedback', type: 'share', reward: 350, completed: false },
-          ],
         },
         {
           id: 'task-4',
@@ -135,10 +118,6 @@ export default function TaskTiers() {
           icon: '🎬',
           minDuration: 120,
           watchProgress: 0,
-          bonusTasks: [
-            { id: 'bonus-5-1', name: 'Comment & Like', type: 'comment', reward: 300, completed: false },
-            { id: 'bonus-5-2', name: 'Share on Social Media', type: 'share', reward: 400, completed: false },
-          ],
         },
         {
           id: 'task-6',
@@ -150,9 +129,6 @@ export default function TaskTiers() {
           action: 'Follow Now',
           completed: false,
           icon: '𝕏',
-          bonusTasks: [
-            { id: 'bonus-6-1', name: 'Share Our Content', type: 'share', reward: 350, completed: false },
-          ],
         },
         {
           id: 'task-7',
@@ -164,9 +140,6 @@ export default function TaskTiers() {
           action: 'Start Survey',
           completed: false,
           icon: '📊',
-          bonusTasks: [
-            { id: 'bonus-7-1', name: 'Additional Feedback', type: 'comment', reward: 300, completed: false },
-          ],
         },
       ],
     },
@@ -190,10 +163,6 @@ export default function TaskTiers() {
           icon: '🎥',
           minDuration: 180,
           watchProgress: 0,
-          bonusTasks: [
-            { id: 'bonus-8-1', name: 'Chat in Stream', type: 'comment', reward: 400, completed: false },
-            { id: 'bonus-8-2', name: 'Share Stream Link', type: 'share', reward: 500, completed: false },
-          ],
         },
         {
           id: 'task-9',
@@ -205,9 +174,6 @@ export default function TaskTiers() {
           action: 'Subscribe',
           completed: false,
           icon: '👑',
-          bonusTasks: [
-            { id: 'bonus-9-1', name: 'Refer a Friend', type: 'share', reward: 600, completed: false },
-          ],
         },
       ],
     },
@@ -231,9 +197,6 @@ export default function TaskTiers() {
           icon: '⭐',
           minDuration: 300,
           watchProgress: 0,
-          bonusTasks: [
-            { id: 'bonus-10-1', name: 'VIP Exclusive Share', type: 'share', reward: 700, completed: false },
-          ],
         },
       ],
     },
@@ -259,22 +222,6 @@ export default function TaskTiers() {
             watchProgress: newProgress,
             completed: isComplete,
             cooldownUntil: isComplete ? Date.now() + COOLOFF_PERIOD : undefined,
-          }
-        }
-        return task
-      })
-    )
-  }
-
-  const handleBonusTaskToggle = (taskId: string, bonusId: string) => {
-    setTasks(prev =>
-      prev.map(task => {
-        if (task.id === taskId && task.bonusTasks) {
-          return {
-            ...task,
-            bonusTasks: task.bonusTasks.map(bonus =>
-              bonus.id === bonusId ? { ...bonus, completed: !bonus.completed } : bonus
-            ),
           }
         }
         return task
@@ -309,11 +256,20 @@ export default function TaskTiers() {
 
   const tiers = initialTiers
 
+  const allTasks = tiers.flatMap(t => t.tasks)
+  const completedCount = tasks.filter(t => t.completed).length
+  const attemptedCount = tasks.filter(t => t.completed || (t.watchProgress || 0) > 0).length
+  const completionPercent = allTasks.length ? Math.round((completedCount / allTasks.length) * 100) : 0
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold text-foreground mb-2">Task Tiers</h2>
-        <p className="text-muted-foreground">Complete tasks to earn rewards. Main task: ₦1,000 (Naira) + bonus rewards. Earn points for tier progression. 3-hour cooldown between completions.</p>
+        <p className="text-muted-foreground">Complete tasks to earn rewards. Main task: ₦1,000 (Naira) with watch tasks earning 50% as you progress. Earn points for tier progression. 3-hour cooldown between completions.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded font-semibold">✅ {completedCount} of {allTasks.length} tasks completed ({completionPercent}%)</span>
+          <span className="text-xs bg-secondary/20 text-secondary px-2 py-1 rounded font-semibold">🧭 {attemptedCount} tasks started</span>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -356,12 +312,22 @@ export default function TaskTiers() {
 
                     return (
                       <div key={task.id}>
-                        <Card className="bg-card/50 border-border/50 p-4 hover:border-primary/50 transition-all cursor-pointer" onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 flex items-start gap-4">
+                        <Card
+                          className={`bg-card/50 border-border/50 p-4 hover:border-primary/50 transition-all ${isMobile ? '' : 'cursor-pointer'}`}
+                          onClick={isMobile ? undefined : () => setExpandedTask(expandedTask === task.id ? null : task.id)}
+                        >
+                          <div className={`flex gap-4 ${isMobile ? 'flex-col items-stretch' : 'items-start justify-between'}`}>
+                            <div className={`flex-1 ${isMobile ? '' : 'flex items-start gap-4'}`}>
                               <div className="text-2xl mt-1">{task.icon}</div>
                               <div className="flex-1">
-                                <h4 className="font-semibold text-foreground">{task.name}</h4>
+                                <div className="flex items-center justify-between gap-2">
+                                  <h4 className="font-semibold text-foreground">{task.name}</h4>
+                                  {task.type === 'watch' && taskData.minDuration && (
+                                    <span className="text-[11px] bg-primary/20 text-primary px-2 py-1 rounded font-semibold">
+                                      {Math.round(((taskData.watchProgress || 0) / taskData.minDuration) * 100)}%
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-sm text-muted-foreground">{task.description}</p>
 
                                 {/* Watch Progress Bar */}
@@ -384,9 +350,26 @@ export default function TaskTiers() {
                                   <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">
                                     ⭐ {taskData.pointsReward} points
                                   </span>
-                                  {task.bonusTasks && task.bonusTasks.length > 0 && (
-                                    <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded">
-                                      🎁 +₦{task.bonusTasks.reduce((sum, b) => sum + b.reward, 0)} bonus
+                                  {task.type === 'watch' && taskData.minDuration && (
+                                    <span className="text-xs bg-secondary/20 text-secondary px-2 py-1 rounded">
+                                      {(() => {
+                                        const maxWatchReward = Math.round(taskData.nairaReward / 2)
+                                        const earnedWatch = Math.round(
+                                          ((taskData.watchProgress || 0) / taskData.minDuration) * maxWatchReward
+                                        )
+                                        const remainingWatch = Math.max(maxWatchReward - earnedWatch, 0)
+
+                                        return (
+                                          <>
+                                            ⏱ Earn ₦{earnedWatch.toLocaleString()} of ₦{maxWatchReward.toLocaleString()} while watching
+                                            {remainingWatch > 0 && (
+                                              <span className="block text-xs text-muted-foreground mt-1">
+                                                ⏳ Remaining: ₦{remainingWatch.toLocaleString()}
+                                              </span>
+                                            )}
+                                          </>
+                                        )
+                                      })()}
                                     </span>
                                   )}
                                   {cooldownRemaining && (
@@ -397,50 +380,28 @@ export default function TaskTiers() {
                                 </div>
                               </div>
                             </div>
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (task.type === 'watch') {
-                                  handleWatchProgress(task.id)
-                                } else {
-                                  handleTaskComplete(task.id)
-                                }
-                              }}
-                              disabled={!!cooldownRemaining}
-                              className={`whitespace-nowrap ${
-                                taskData.completed
-                                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50'
-                                  : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                              }`}
-                            >
-                              {cooldownRemaining ? '⏳ On Cooloff' : task.type === 'watch' ? (taskData.watchProgress === taskData.minDuration ? '✓ Complete' : 'Watch') : '✓ Complete'}
-                            </Button>
+                            <div className={`${isMobile ? 'w-full' : ''}`}>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (task.type === 'watch') {
+                                    handleWatchProgress(task.id)
+                                  } else {
+                                    handleTaskComplete(task.id)
+                                  }
+                                }}
+                                disabled={!!cooldownRemaining}
+                                className={`whitespace-nowrap ${isMobile ? 'w-full' : ''} ${
+                                  taskData.completed
+                                    ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50'
+                                    : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                                }`}
+                              >
+                                {cooldownRemaining ? '⏳ On Cooloff' : task.type === 'watch' ? (taskData.watchProgress === taskData.minDuration ? '✓ Complete' : 'Watch') : '✓ Complete'}
+                              </Button>
+                            </div>
                           </div>
 
-                          {/* Bonus Tasks */}
-                          {expandedTask === task.id && task.bonusTasks && task.bonusTasks.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-border/30">
-                              <p className="text-xs font-semibold text-muted-foreground mb-3">BONUS TASKS - Complete for extra rewards:</p>
-                              <div className="space-y-2">
-                                {task.bonusTasks.map(bonus => (
-                                  <button
-                                    key={bonus.id}
-                                    onClick={() => handleBonusTaskToggle(task.id, bonus.id)}
-                                    className={`w-full p-3 rounded-lg border flex items-center justify-between transition-all ${
-                                      (taskData.bonusTasks?.find(b => b.id === bonus.id)?.completed)
-                                        ? 'border-green-500/50 bg-green-500/10'
-                                        : 'border-border/30 hover:border-primary/50 bg-secondary/30'
-                                    }`}
-                                  >
-                                    <span className="text-sm text-foreground">
-                                      {(taskData.bonusTasks?.find(b => b.id === bonus.id)?.completed) ? '✓' : '○'} {bonus.name}
-                                    </span>
-                                    <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded">+₦{bonus.reward}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </Card>
                       </div>
                     )
